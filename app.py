@@ -75,15 +75,6 @@ def api_audits():
     return jsonify(audit_records)
 
 
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "service": PROJECT_NAME, "commit": COMMIT_SHA})
-
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
 @app.route("/api/audits/summary", methods=["GET"])
 def api_audits_summary():
     total = len(audit_records)
@@ -99,3 +90,13 @@ def api_audits_summary():
         },
         "safe_ratio": round((safe / total * 100), 2) if total > 0 else 100.0
     })
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "service": PROJECT_NAME, "commit": COMMIT_SHA})
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

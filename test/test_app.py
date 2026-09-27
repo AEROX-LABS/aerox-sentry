@@ -1,7 +1,11 @@
+import os
+import sys
 import io
 import pytest
 from PIL import Image
-from app import app, audit_records
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from app import app, audit_records  # noqa: E402
 
 
 @pytest.fixture
@@ -50,6 +54,7 @@ def test_invalid_extension_rejected(client):
     )
     assert res.status_code == 400
     assert "Invalid format" in res.get_json()["error"]
+
 
 def test_summary_metrics(client):
     res = client.get("/api/audits/summary")
