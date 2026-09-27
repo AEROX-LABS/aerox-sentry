@@ -62,3 +62,6 @@ def test_summary_metrics(client):
     data = res.get_json()
     assert "threat_distribution" in data
     assert data["total_inspected"] == 0
+
+def test_pipeline_gate_intentional_failure():
+    assert 1 == 2, "Intentional failure to demonstrate pipeline gate blocking deployment"
