@@ -1,0 +1,58 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Flake8 Linter
+        run: flake8 .
+
+      - name: Run Pytest Suite
+        run: pytest -v test/
+
+  build-and-smoke-test:
+    name: Container Build & Health Validation
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Container
+        run: docker build --build-arg GIT_SHA=${{ github.sha }} -t aerox-sentry:${{ github.sha }} .
+
+      - name: Run Container Smoke Test
+        run: |
+          docker run -d -p 5000:5000 --name test-container aerox-sentry:${{ github.sha }}
+          sleep 4
+          curl --fail http://localhost:5000/health || (docker logs test-container && exit 1)
+          docker stop test-container
+
+  deploy:
+    name: Trigger Render Deployment
+    needs: build-and-smoke-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Webhook
+        run: |
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}&ref=${{ github.sha }}"
