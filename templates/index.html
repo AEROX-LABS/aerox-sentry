@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>aerox-sentry — Automated Media Metadata &amp; Geolocation Sanitizer</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px auto; max-width: 800px; padding: 0 20px; line-height: 1.5; color: #1f2937; }
+    h1 { margin-bottom: 4px; }
+    .badge-bar { display: flex; gap: 15px; margin: 20px 0; }
+    .stat-card { border: 1px solid #e5e7eb; padding: 12px 20px; border-radius: 6px; background: #f9fafb; }
+    .stat-val { font-size: 20px; font-weight: bold; color: #111827; }
+    form { border: 2px dashed #d1d5db; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0; }
+    button { background: #2563eb; color: #fff; border: 0; padding: 9px 18px; border-radius: 5px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+    th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+    th { background: #f3f4f6; }
+    .threat-High { color: #dc2626; font-weight: bold; }
+    .threat-Medium { color: #d97706; }
+    .threat-Safe { color: #16a34a; }
+    footer { margin-top: 50px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>aerox-sentry: Image Metadata Pipeline</h1>
+  <p>Real-time EXIF header extraction, privacy threat indexing, and buffer-level data stripping.</p>
+
+  <div class="badge-bar">
+    <div class="stat-card">Total Sanitized: <span class="stat-val">{{ total_scrubbed }}</span></div>
+    <div class="stat-card">Critical GPS Leaks Neutralized: <span class="stat-val">{{ high_threats }}</span></div>
+  </div>
+
+  <form method="POST" action="/scrub" enctype="multipart/form-data">
+    <input type="file" name="photo" accept="image/*" required>
+    <button type="submit">Sanitize &amp; Audit</button>
+  </form>
+
+  <h2>Audit Log</h2>
+  {% if records %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>File</th>
+          <th>Metadata Count</th>
+          <th>Threat Evaluation</th>
+          <th>Identified Tags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in records %}
+          <tr>
+            <td>#{{ item.id }}</td>
+            <td>{{ item.filename }}</td>
+            <td>{{ item.tags_detected }} headers</td>
+            <td class="threat-{{ item.threat_level.split(':')[0].split(' ')[0] }}">{{ item.threat_level }}</td>
+            <td>{{ item.sample_tags | join(', ') if item.sample_tags else 'None' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No images scanned in this session.</p>
+  {% endif %}
+
+  <footer>Running Commit ID: <code>{{ commit }}</code> | Service: aerox-sentry</footer>
+</body>
+</html>
