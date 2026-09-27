@@ -9,6 +9,8 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB
 
 audit_records = []
 
+PROJECT_NAME = "aerox-sentry"
+
 raw_sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_SHA") or "local"
 COMMIT_SHA = raw_sha[:7]
 
@@ -161,7 +163,7 @@ def analyze_and_scrub(file_stream, filename):
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "commit": COMMIT_SHA})
+    return jsonify({"status": "ok", "service": PROJECT_NAME, "commit": COMMIT_SHA})
 
 
 @app.route("/api/audits", methods=["GET"])
