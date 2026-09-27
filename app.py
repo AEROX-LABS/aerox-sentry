@@ -1,7 +1,7 @@
 import io
 import os
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from PIL import ExifTags, Image
 
 app = Flask(__name__)
@@ -122,6 +122,7 @@ def analyze_and_scrub(file_stream, filename):
 
     except Exception as e:
         record = {
+            "id": len(audit_records) + 1,
             "filename": filename,
             "threat_level": "Safe (No EXIF)",
             "has_gps": False,
@@ -129,6 +130,8 @@ def analyze_and_scrub(file_stream, filename):
             "gps_metadata": {},
             "device_metadata": {},
             "all_metadata": {},
+            "metadata_count": 0,
+            "identified_tags": [],
             "scrubbed": False,
             "error": str(e),
         }
@@ -147,7 +150,11 @@ def analyze_and_scrub(file_stream, filename):
     else:
         threat_level = "Safe (No EXIF)"
 
+    tag_names = sorted(list(set(list(gps_metadata.keys()) + list(device_metadata.keys()))))
+    metadata_count = len(tag_names)
+
     record = {
+        "id": len(audit_records) + 1,
         "filename": filename,
         "threat_level": threat_level,
         "has_gps": has_gps,
@@ -155,10 +162,47 @@ def analyze_and_scrub(file_stream, filename):
         "gps_metadata": gps_metadata,
         "device_metadata": device_metadata,
         "all_metadata": all_exif,
+        "metadata_count": metadata_count,
+        "identified_tags": tag_names,
         "scrubbed": True,
     }
     audit_records.append(record)
     return record
+
+
+@app.route("/", methods=["GET"])
+def home():
+    high_threat_count = sum(1 for r in audit_records if r.get("threat_level") == "High: Geolocation Exposed")
+    return render_template(
+        "index.html",
+        records=audit_records,
+        total_scrubbed=len(audit_records),
+        high_threats=high_threat_count,
+        commit=COMMIT_SHA,
+    )
+
+
+@app.route("/scrub", methods=["POST"])
+def scrub():
+    try:
+        if "photo" not in request.files:
+            return jsonify({"error": "No file field named 'photo' found in request"}), 400
+
+        file = request.files["photo"]
+        if not file or not file.filename:
+            return jsonify({"error": "No file selected or empty filename"}), 400
+
+        _, ext = os.path.splitext(file.filename)
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".tiff"}
+        if ext.lower() not in allowed_extensions:
+            return jsonify({
+                "error": f"Invalid file extension: '{ext}'. Allowed: {', '.join(sorted(allowed_extensions))}"
+            }), 400
+
+        analyze_and_scrub(file.stream, file.filename)
+        return redirect(url_for("home"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/health", methods=["GET"])
@@ -172,11 +216,11 @@ def get_audits():
 
 
 @app.route("/api/scrub", methods=["POST"])
-def scrub_image():
-    if "file" not in request.files:
+def scrub_api():
+    if "file" not in request.files and "photo" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
-    file = request.files["file"]
-    if not file.filename:
+    file = request.files.get("photo") or request.files.get("file")
+    if not file or not file.filename:
         return jsonify({"error": "Empty filename"}), 400
     record = analyze_and_scrub(file.stream, file.filename)
     return jsonify(record), 200

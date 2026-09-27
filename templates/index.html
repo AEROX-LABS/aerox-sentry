@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>aerox-sentry — Automated Media Metadata & Geolocation Sanitizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(55, 65, 81, 0.6);
+      --card-border-hover: rgba(99, 102, 241, 0.4);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --cyan: #06b6d4;
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --danger-border: rgba(239, 68, 68, 0.35);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --warning-border: rgba(245, 158, 11, 0.35);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --success-border: rgba(16, 185, 129, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      width: 100%;
+      flex: 1;
+    }
+
+    header {
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    .brand-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .brand-tag-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #818cf8;
+      box-shadow: 0 0 8px #818cf8;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 30%, #c7d2fe 70%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 650px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-2px);
+    }
+
+    .stat-info h3 {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .stat-info .stat-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-badge {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+
+    .badge-primary {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #818cf8;
+    }
+
+    .badge-danger {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: #f87171;
+    }
+
+    .upload-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .upload-card h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .upload-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .file-input-wrapper {
+      flex: 1;
+      min-width: 260px;
+      position: relative;
+    }
+
+    .file-input {
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(99, 102, 241, 0.4);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .file-input:hover {
+      border-color: #818cf8;
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .file-input::file-selector-button {
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      border: none;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 0.85rem;
+      margin-right: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .file-input::file-selector-button:hover {
+      background: #4338ca;
+    }
+
+    .btn-submit {
+      padding: 0.95rem 1.85rem;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+      background: linear-gradient(135deg, #4338ca, #4f46e5);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .table-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-header-bar {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-header-bar h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.4);
+      padding: 1rem 1.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 1.15rem 1.5rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(55, 65, 81, 0.3);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: rgba(30, 41, 59, 0.35);
+    }
+
+    .id-cell {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .filename-cell {
+      font-weight: 500;
+      color: #ffffff;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .count-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    .threat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .threat-high {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: #f87171;
+    }
+
+    .threat-medium {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      color: #fbbf24;
+    }
+
+    .threat-safe {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: #34d399;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      max-width: 320px;
+    }
+
+    .tag-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      background: rgba(31, 41, 55, 0.7);
+      border: 1px solid rgba(75, 85, 99, 0.4);
+      border-radius: 4px;
+      color: #cbd5e1;
+    }
+
+    .tag-pill.more {
+      color: #818cf8;
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .no-tags {
+      color: #6b7280;
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: #6b7280;
+      font-size: 0.85rem;
+      border-top: 1px solid rgba(55, 65, 81, 0.25);
+      margin-top: 3rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand-tag">
+        <span class="brand-tag-dot"></span>
+        Media Sentinel
+      </div>
+      <h1>aerox-sentry</h1>
+      <p class="subtitle">Real-time EXIF header extraction, privacy threat indexing, and buffer-level data stripping.</p>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Total Sanitized</h3>
+          <div class="stat-value">{{ total_scrubbed }}</div>
+        </div>
+        <div class="stat-badge badge-primary">🛡️</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Critical GPS Leaks Neutralized</h3>
+          <div class="stat-value">{{ high_threats }}</div>
+        </div>
+        <div class="stat-badge badge-danger">📍</div>
+      </div>
+    </div>
+
+    <section class="upload-card">
+      <h2>Sanitize New Image</h2>
+      <form class="upload-form" action="/scrub" method="POST" enctype="multipart/form-data">
+        <div class="file-input-wrapper">
+          <input class="file-input" type="file" id="photo" name="photo" accept="image/*" required>
+        </div>
+        <button class="btn-submit" type="submit" id="submit-btn">Sanitize & Audit</button>
+      </form>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header-bar">
+        <h2>Session Audit Ledger</h2>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Filename</th>
+              <th>Metadata Count</th>
+              <th>Threat Evaluation</th>
+              <th>Identified Tags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if records %}
+              {% for record in records %}
+                <tr>
+                  <td class="id-cell">#{{ record.id or loop.index }}</td>
+                  <td class="filename-cell" title="{{ record.filename }}">{{ record.filename }}</td>
+                  <td class="count-cell">{{ record.metadata_count }}</td>
+                  <td>
+                    {% if record.threat_level == 'High: Geolocation Exposed' %}
+                      <span class="threat-badge threat-high">{{ record.threat_level }}</span>
+                    {% elif record.threat_level == 'Medium: Device/Timestamp Exposed' %}
+                      <span class="threat-badge threat-medium">{{ record.threat_level }}</span>
+                    {% else %}
+                      <span class="threat-badge threat-safe">{{ record.threat_level }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if record.identified_tags %}
+                      <div class="tag-cloud">
+                        {% for tag in record.identified_tags[:6] %}
+                          <span class="tag-pill">{{ tag }}</span>
+                        {% endfor %}
+                        {% if record.identified_tags|length > 6 %}
+                          <span class="tag-pill more">+{{ record.identified_tags|length - 6 }} more</span>
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <span class="no-tags">None</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="empty-state">No images scanned in this session.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <footer>Running Commit ID: {{ commit }} | Service: aerox-sentry</footer>
+</body>
+</html>
