@@ -218,6 +218,23 @@ def get_audits():
     return jsonify(audit_records)
 
 
+@app.route("/api/audits/summary", methods=["GET"])
+def api_audits_summary():
+    total = len(audit_records)
+    high_threats = sum(1 for r in audit_records if "High" in r["threat_level"])
+    medium_threats = sum(1 for r in audit_records if "Medium" in r["threat_level"])
+    safe = sum(1 for r in audit_records if "Safe" in r["threat_level"])
+    return jsonify({
+        "total_inspected": total,
+        "threat_distribution": {
+            "high": high_threats,
+            "medium": medium_threats,
+            "safe": safe
+        },
+        "safe_ratio": round((safe / total * 100), 2) if total > 0 else 100.0
+    })
+
+
 @app.route("/api/scrub", methods=["POST"])
 def scrub_api():
     if "file" not in request.files and "photo" not in request.files:
