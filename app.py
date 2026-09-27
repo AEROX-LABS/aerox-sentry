@@ -196,7 +196,10 @@ def scrub():
         allowed_extensions = {".jpg", ".jpeg", ".png", ".tiff"}
         if ext.lower() not in allowed_extensions:
             return jsonify({
-                "error": f"Invalid file extension: '{ext}'. Allowed: {', '.join(sorted(allowed_extensions))}"
+                "error": (
+                    f"Invalid format: extension '{ext}' is not supported. "
+                    f"Allowed: {', '.join(sorted(allowed_extensions))}"
+                )
             }), 400
 
         analyze_and_scrub(file.stream, file.filename)
