@@ -50,3 +50,10 @@ def test_invalid_extension_rejected(client):
     )
     assert res.status_code == 400
     assert "Invalid format" in res.get_json()["error"]
+
+def test_summary_metrics(client):
+    res = client.get("/api/audits/summary")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "threat_distribution" in data
+    assert data["total_inspected"] == 0

@@ -83,3 +83,19 @@ def health():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+@app.route("/api/audits/summary", methods=["GET"])
+def api_audits_summary():
+    total = len(audit_records)
+    high_threats = sum(1 for r in audit_records if "High" in r["threat_level"])
+    medium_threats = sum(1 for r in audit_records if "Medium" in r["threat_level"])
+    safe = sum(1 for r in audit_records if "Safe" in r["threat_level"])
+    return jsonify({
+        "total_inspected": total,
+        "threat_distribution": {
+            "high": high_threats,
+            "medium": medium_threats,
+            "safe": safe
+        },
+        "safe_ratio": round((safe / total * 100), 2) if total > 0 else 100.0
+    })
